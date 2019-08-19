@@ -1,5 +1,9 @@
 <div>
   <button #tbut class='butTest'>test1</button>
+  <button (click)='testRxfun($event)'>testRxfun</button>
+  <button (click)='stopObservable($event)'>unsubscribe</button>
+  <button (click)='imgInitMove($event)'>imgMove</button>
+  <button (click)='imgStopMove($event)'>imgStopMovue</button>
 </div>
 
 <div id = 'drag'></div>
@@ -12,4 +16,24 @@
     Your browser does not support HTML5 video.
   </video>
   </div>
+</div>
+
+<div>
+  <img src="https://res.cloudinary.com/dohtkyi84/image/upload/c_scale,w_50/v1483019072/head-cover6.jpg" alt="">
+  <img src="https://res.cloudinary.com/dohtkyi84/image/upload/c_scale,w_50/v1483019072/head-cover5.jpg" alt="">
+  <img src="https://res.cloudinary.com/dohtkyi84/image/upload/c_scale,w_50/v1483019072/head-cover4.jpg" alt="">
+  <img src="https://res.cloudinary.com/dohtkyi84/image/upload/c_scale,w_50/v1483019072/head-cover3.jpg" alt="">
+  <img src="https://res.cloudinary.com/dohtkyi84/image/upload/c_scale,w_50/v1483019072/head-cover2.jpg" alt="">
+  <img src="https://res.cloudinary.com/dohtkyi84/image/upload/c_scale,w_50/v1483019072/head-cover1.jpg" alt="">
+</div>
+
+<div>
+  <input id='searchInput'>
+  <span id='theRequestValue'></span>
+</div>
+
+<div class="autocomplete">
+  <input class="input" type="search" id="search" autocomplete="off">
+  <ul id="suggest-list" class="suggest">
+  </ul>
 </div>

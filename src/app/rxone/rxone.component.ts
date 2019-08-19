@@ -1,6 +1,9 @@
 import { Component, OnInit, ElementRef, Renderer2, AfterViewInit } from '@angular/core';
-import { Subject, Observable, fromEvent, of, concat } from 'rxjs';
-import { scan, throttle, throttleTime, map, takeUntil, concatAll, zip, filter, withLatestFrom } from 'rxjs/operators';
+import { Subject, Observable, fromEvent, of, concat, Subscription } from 'rxjs';
+import { scan, throttle, throttleTime, map, takeUntil, concatAll, zip, filter,
+   withLatestFrom, delay, debounceTime, switchMap } from 'rxjs/operators';
+
+import { example_window, example_window_cont } from './rxfun';
 
 
 @Component({
@@ -9,6 +12,8 @@ import { scan, throttle, throttleTime, map, takeUntil, concatAll, zip, filter, w
   styleUrls: ['./rxone.component.scss']
 })
 export class RxoneComponent implements OnInit, AfterViewInit {
+  subscription: Subscription;
+  imgMoveSubscription: Array<Subscription> = [];
 
   // viewchild viewchildren 装饰器 获取模板视图的元素
   /**
@@ -33,6 +38,8 @@ export class RxoneComponent implements OnInit, AfterViewInit {
     this.addEmitter();
     this.async_read(this.print_msg); // 一个回调
     this.dragInit();
+    this.videoInit();
+    // this.imgInit();
   }
 
   addEmitter() {
@@ -96,13 +103,19 @@ export class RxoneComponent implements OnInit, AfterViewInit {
     const mouseDown = fromEvent(video, 'mousedown');
     const mouseUp = fromEvent(document, 'mouseup');
     const mouseMove = fromEvent(document, 'mousemove');
+    /** 工具函数 保证值在范围内 */
+    const validValue  = (value, max, min) => {
+      return Math.min(Math.max(value, min), max);
+    };
     mouseDown.pipe(filter(e => video.classList.contains('video-fixed')),
     map(e => mouseMove.pipe(takeUntil(mouseUp))), concatAll(),
     withLatestFrom(mouseDown, (move: any, down: any) => {
       return {
-        x: move.clientX - down.offsetX,
-        y: move.clientY - down.offsetY
-    }
+        // offsetX, offsetY 发生事件的地点在事件源元素的坐标系统中的x坐标和y坐标
+        // clientX 返回当事件被触发时，鼠标指针的水平坐标
+        x: validValue(move.clientX - down.offsetX, window.innerWidth - 320, 0),
+        y: validValue(move.clientY - down.offsetY, window.innerHeight - 180, 0)
+          };
     })
     // map((m: any) => {
     //   return {x: m.clientX, y: m.clientY};
@@ -116,6 +129,84 @@ export class RxoneComponent implements OnInit, AfterViewInit {
     );
 
   }
+
+
+  /** 图片初始化 */
+  imgInitMove(e: Event) {
+    e.stopPropagation();
+    const imgList = this.el.nativeElement.querySelectorAll('img');
+    const movePos = fromEvent(document, 'mousemove').pipe(
+      map((e: any) =>  {
+        return {x: e.clientX, y: e.clientY};
+      })
+    );
+    const followMouse = (DOMArr) => {
+      const delayTime = 600;
+      DOMArr.forEach((item, index) => {
+        // Math.pow(x, y) x的y次幂 Math.cos 余弦值
+        this.imgMoveSubscription[index] = movePos.pipe(delay(delayTime * (Math.pow(0.65, index) + Math.cos(index / 4)) / 2)).subscribe(
+          pos => {
+            this.render2.setStyle(item, 'transform', `translate3d(${pos.x}px, ${pos.y}px, 0)`);
+          }
+        );
+      });
+    };
+    followMouse(Array.from(imgList));
+  }
+  imgStopMove(e) {
+    this.imgMoveSubscription.forEach(item => item.unsubscribe());
+  }
+
+  /** 输入框获取文件 */
+  inputInt() {
+    const input: HTMLElement = this.el.nativeElement.querySelector('#searchInput');
+    const spanValue: HTMLElement = this.el.nativeElement.querySelector('#theRequestValue');
+
+    fromEvent(input, 'input').pipe(
+      debounceTime(300),
+      map( (e: any) =>  e.target.value)
+    ).subscribe(value => {
+      spanValue.textContent = value;
+    });
+
+  }
+
+  /** 首先我们会有一个搜寻框(input#search)，当我们在上面打字并停顿超过100 毫秒就发送HTTP Request
+   *  来取得建议选项并显示在收寻框下方(ul#suggest-list)，如果使用者在前一次发送的请求还没有回来就打了下一个字，
+   * 此时前一个发送的请求就要舍弃掉，当建议选项显示之后可以用滑鼠点击取建议选项代搜寻框的文字。 */
+  selectInputInit() {
+    const searchInp: HTMLElement = this.el.nativeElement.querySelector('#search');
+    const suggestList: HTMLElement = this.el.nativeElement.querySelector('#suggest-list');
+    const keyword = fromEvent(searchInp, 'input');
+    const selectItem = fromEvent(suggestList, 'click');
+    const getSuggestList = (value) => {
+      return fetch('');
+    };
+    const render = (suggestArr = []) => {
+      suggestList.innerHTML = suggestArr
+                              .map( item => `<li>${item}</li>`)
+                              .join('');
+    };
+
+    keyword.pipe(switchMap(e => getSuggestList(e.target['value']),
+     (e, res) => res[1] ))
+    .subscribe(list => render(list));
+
+
+  }
+
+  testRxfun(e: Event) {
+    e.stopPropagation();
+    let observable: Observable<any> = example_window;
+    observable = example_window_cont;
+    this.subscription = observable.subscribe(
+      console.log
+    );
+  }
+  stopObservable(e) {
+    this.subscription.unsubscribe();
+  }
+
 
   print_msg(msg) {
     console.log(msg);
